@@ -1,0 +1,18 @@
+-- Daily Meeting Memo App
+-- Deferred SQL reference for Phase 2 security hardening
+--
+-- Current phase does NOT use Supabase Auth + RLS.
+-- Current phase uses app-managed email + password authentication similar to defect_manage.
+-- Do not apply RLS in the current phase.
+--
+-- When the scrum board expands into a multi-project platform, this file will be rewritten
+-- to cover:
+-- 1) Supabase Auth based login
+-- 2) auth.users and app user/profile mapping
+-- 3) project membership based access control
+-- 4) project-scoped RLS for worker, session, note data
+-- 5) platform admin vs project admin separation
+--
+-- See:
+-- - docs/platform_security_roadmap.md
+-- - docs/daily_meeting_memo_app_spec.md

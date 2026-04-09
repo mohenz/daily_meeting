@@ -1,0 +1,9 @@
+{
+  "name": "scrum-board-platform",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "check:syntax": "node scripts/check-syntax.mjs"
+  }
+}
