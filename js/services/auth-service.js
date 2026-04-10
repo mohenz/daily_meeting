@@ -297,6 +297,7 @@ export async function signUpWithPassword({ name, email, password, passwordConfir
                 .update({
                     name: normalizedName,
                     email: normalizedEmail,
+                    is_admin: false,
                     password_hash: hashedPassword,
                     password_updated_at: now,
                     last_login_at: now
