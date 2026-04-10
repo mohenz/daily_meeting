@@ -1,4 +1,6 @@
 import { supabase } from "./supabase-client.js";
+import { fetchNextWorkerSortOrder } from "./daily-meeting-service.js";
+import { getWorkerEmoji } from "../core/worker-emoji.js";
 import { normalizeEmail } from "../core/utils.js";
 
 const SESSION_STORAGE_KEY = "daily_meeting_current_session";
@@ -267,6 +269,7 @@ export async function signUpWithPassword({ name, email, password, passwordConfir
 
             worker = updateResult.data;
         } else {
+            const nextSortOrder = await fetchNextWorkerSortOrder();
             const insertResult = await supabase
                 .from("worker_profiles")
                 .insert({
@@ -276,7 +279,7 @@ export async function signUpWithPassword({ name, email, password, passwordConfir
                     role_name: null,
                     is_admin: false,
                     status: "active",
-                    sort_order: 100,
+                    sort_order: nextSortOrder,
                     password_updated_at: now,
                     last_login_at: now
                 })
@@ -290,6 +293,7 @@ export async function signUpWithPassword({ name, email, password, passwordConfir
             worker = insertResult.data;
         }
 
+        getWorkerEmoji(worker);
         const session = persistSession(worker);
         return {
             session,

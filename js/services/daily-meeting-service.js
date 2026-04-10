@@ -9,6 +9,21 @@ function ensureSuccess(result, fallbackMessage) {
     return result.data;
 }
 
+export async function fetchNextWorkerSortOrder() {
+    const result = await supabase
+        .from("worker_profiles")
+        .select("sort_order")
+        .order("sort_order", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (result.error && result.error.code !== "PGRST116") {
+        throw new Error(result.error.message || "다음 작업자 순위를 계산하지 못했습니다.");
+    }
+
+    return Number(result.data?.sort_order ?? -1) + 1;
+}
+
 export async function fetchCurrentWorkerProfile(workerId) {
     if (!workerId) {
         return null;
@@ -140,9 +155,17 @@ export async function saveWorkerProfile(payload) {
         email: normalizeEmail(payload.email),
         role_name: payload.role_name,
         is_admin: payload.is_admin,
-        status: payload.status,
-        sort_order: toNumber(payload.sort_order, 100)
+        status: payload.status
     };
+
+    if (payload.id) {
+        normalized.sort_order = toNumber(payload.sort_order, 100);
+    } else {
+        const hasExplicitSortOrder = String(payload.sort_order ?? "").trim() !== "";
+        normalized.sort_order = hasExplicitSortOrder
+            ? toNumber(payload.sort_order, 100)
+            : await fetchNextWorkerSortOrder();
+    }
 
     if (payload.password_hash) {
         normalized.password_hash = payload.password_hash;

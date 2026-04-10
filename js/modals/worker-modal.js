@@ -1,6 +1,10 @@
+import { getRandomWorkerEmoji, getWorkerEmoji, getWorkerEmojiOptions } from "../core/worker-emoji.js";
 import { escapeHtml } from "../core/utils.js";
 
-export function createWorkerModal({ worker, onSubmit, onComplete }) {
+export function createWorkerModal({ worker, nextSortOrder = 0, onSubmit, onComplete }) {
+    const selectedEmoji = worker ? getWorkerEmoji(worker) : getRandomWorkerEmoji();
+    const emojiOptions = getWorkerEmojiOptions();
+
     return {
         eyebrow: "Worker Profile",
         title: worker ? "작업자 수정" : "작업자 등록",
@@ -17,6 +21,12 @@ export function createWorkerModal({ worker, onSubmit, onComplete }) {
                         <input name="email" type="email" value="${escapeHtml(worker?.email || "")}" required placeholder="name@example.com">
                     </label>
                     <label class="field-block">
+                        <span><i class="fa-regular fa-face-smile"></i> 이모지</span>
+                        <select name="avatar_emoji">
+                            ${emojiOptions.map((emoji) => `<option value="${emoji}" ${emoji === selectedEmoji ? "selected" : ""}>${emoji}</option>`).join("")}
+                        </select>
+                    </label>
+                    <label class="field-block">
                         <span><i class="fa-solid fa-briefcase"></i> 역할명</span>
                         <input name="role_name" type="text" value="${escapeHtml(worker?.role_name || "")}" placeholder="예: PM, QA, Backend">
                     </label>
@@ -29,7 +39,7 @@ export function createWorkerModal({ worker, onSubmit, onComplete }) {
                     </label>
                     <label class="field-block">
                         <span><i class="fa-solid fa-sort"></i> 정렬순위</span>
-                        <input name="sort_order" type="number" min="0" value="${escapeHtml(String(worker?.sort_order ?? 100))}" required>
+                        <input name="sort_order" type="number" min="0" value="${escapeHtml(String(worker?.sort_order ?? nextSortOrder))}" required>
                     </label>
                     <label class="field-block">
                         <span><i class="fa-solid fa-key"></i> ${worker ? "새 비밀번호" : "초기 비밀번호"}</span>
@@ -56,6 +66,7 @@ export function createWorkerModal({ worker, onSubmit, onComplete }) {
                 id: worker?.id || "",
                 name: formData.get("name")?.toString().trim() || "",
                 email: formData.get("email")?.toString().trim() || "",
+                avatar_emoji: formData.get("avatar_emoji")?.toString() || selectedEmoji,
                 role_name: formData.get("role_name")?.toString().trim() || "",
                 status: formData.get("status")?.toString() || "active",
                 sort_order: formData.get("sort_order")?.toString() || "100",

@@ -1,5 +1,6 @@
 import { elements } from "./core/elements.js";
 import { createModalManager } from "./core/modal-manager.js";
+import { initializeWorkerEmojis, setWorkerEmoji } from "./core/worker-emoji.js";
 import { todayKey } from "./core/utils.js";
 import {
     hashPassword,
@@ -29,6 +30,7 @@ import {
 } from "./state/app-state.js";
 import { renderAppView } from "./views/index.js";
 import { createNoteModal } from "./modals/note-modal.js";
+import { createNotePreviewModal } from "./modals/note-preview-modal.js";
 import { createWorkerModal } from "./modals/worker-modal.js";
 import { createEmergencyModal } from "./modals/session-modal.js";
 
@@ -91,6 +93,7 @@ async function refreshData() {
         const data = await fetchAppData({
             includePrivateWorkerFields: Boolean(getState().currentWorker?.is_admin)
         });
+        initializeWorkerEmojis(data.workers);
         patchState({
             workers: data.workers,
             sessions: data.sessions,
@@ -178,6 +181,25 @@ function openNoteModal(sessionId, workerId) {
     }));
 }
 
+function openNotePreviewModal(sessionId, workerId) {
+    const state = getState();
+    const session = getSelectedDateSessions().find((item) => item.id === sessionId);
+    const worker = state.workers.find((item) => item.id === workerId);
+
+    if (!session || !worker) {
+        return;
+    }
+
+    const note = getNoteForSessionWorker(session.id, worker.id);
+
+    modalManager.openModal(createNotePreviewModal({
+        worker,
+        session,
+        note,
+        editable: canEditWorkerNotes(worker.id)
+    }));
+}
+
 function openWorkerModal(workerId = "") {
     const state = getState();
     if (!state.currentWorker?.is_admin) {
@@ -185,11 +207,16 @@ function openWorkerModal(workerId = "") {
     }
 
     const worker = state.workers.find((item) => item.id === workerId) || null;
+    const nextSortOrder = state.workers.length
+        ? Math.max(...state.workers.map((item) => Number(item.sort_order) || 0)) + 1
+        : 0;
 
     modalManager.openModal(createWorkerModal({
         worker,
+        nextSortOrder,
         async onSubmit(payload) {
             const normalizedPayload = { ...payload };
+            const selectedEmoji = normalizedPayload.avatar_emoji;
             if (normalizedPayload.password) {
                 if (normalizedPayload.password !== normalizedPayload.password_confirm) {
                     throw new Error("비밀번호 확인이 일치하지 않습니다.");
@@ -198,10 +225,12 @@ function openWorkerModal(workerId = "") {
                 normalizedPayload.password_hash = await hashPassword(normalizedPayload.password);
             }
 
+            delete normalizedPayload.avatar_emoji;
             delete normalizedPayload.password;
             delete normalizedPayload.password_confirm;
 
-            await saveWorkerProfile(normalizedPayload);
+            const savedWorker = await saveWorkerProfile(normalizedPayload);
+            setWorkerEmoji(savedWorker.id, selectedEmoji);
         },
         onComplete: refreshData
     }));
@@ -304,6 +333,11 @@ function bindEvents() {
             return;
         }
 
+        if (target.dataset.action === "open-note-preview") {
+            openNotePreviewModal(target.dataset.sessionId || "", target.dataset.workerId || "");
+            return;
+        }
+
         if (target.dataset.action === "open-worker-modal") {
             openWorkerModal(target.dataset.workerId || "");
             return;
@@ -332,6 +366,24 @@ function bindEvents() {
             event.preventDefault();
             await modalManager.handleSubmit();
         }
+    });
+
+    document.body.addEventListener("keydown", (event) => {
+        const target = event.target.closest("[data-action='open-note-preview']");
+        if (!target) {
+            return;
+        }
+
+        if (target !== event.target) {
+            return;
+        }
+
+        if (event.key !== "Enter" && event.key !== " ") {
+            return;
+        }
+
+        event.preventDefault();
+        openNotePreviewModal(target.dataset.sessionId || "", target.dataset.workerId || "");
     });
 
     elements.modalBackdrop.addEventListener("click", (event) => {

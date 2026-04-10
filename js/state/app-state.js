@@ -76,6 +76,20 @@ export function getDateGroups() {
         }
     });
 
+    if (state.currentWorker?.is_admin) {
+        const today = todayKey();
+        if (!grouped.has(today)) {
+            grouped.set(today, {
+                date: today,
+                sessions: [],
+                scrumCount: 0,
+                wrapUpCount: 0,
+                emergencyCount: 0,
+                lastUpdatedAt: ""
+            });
+        }
+    }
+
     return Array.from(grouped.values()).sort((left, right) => right.date.localeCompare(left.date));
 }
 

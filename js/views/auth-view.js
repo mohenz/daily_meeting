@@ -9,7 +9,7 @@ function renderModeButton(mode, currentMode, label) {
 }
 
 export function renderSessionPanel(container, state) {
-    const { currentWorker, authMessage, authMode, session } = state;
+    const { currentWorker, authMessage, authMode } = state;
 
     if (!currentWorker) {
         container.innerHTML = `
@@ -52,18 +52,14 @@ export function renderSessionPanel(container, state) {
     }
 
     container.innerHTML = `
-        <div class="panel-header">
-            <h2>세션</h2>
-            <button class="ghost-button compact" type="button" data-action="sign-out">로그아웃</button>
-        </div>
         <div class="session-card">
-            <div class="info-line"><span>이메일</span><strong>${escapeHtml(currentWorker.email || session?.email || "-")}</strong></div>
             <div class="info-line"><span>권한</span><strong>${currentWorker?.is_admin ? "관리자" : "작업자"}</strong></div>
             <div class="info-line"><span>작업자명</span><strong>${escapeHtml(currentWorker?.name || "미연결")}</strong></div>
-            <div class="info-line"><span>로그인 시각</span><strong>${escapeHtml(currentWorker?.last_login_at || session?.loggedAt || "-")}</strong></div>
         </div>
-        <button class="action-button secondary compact" type="button" data-action="refresh-data">새로고침</button>
-        <p class="helper-text">${escapeHtml(authMessage || "앱 세션이 유지되고 있습니다.")}</p>
+        <div class="helper-text" style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+            <span>${escapeHtml(authMessage || "로그인되었습니다.")}</span>
+            <button type="button" data-action="sign-out" style="padding: 0; border: 0; background: none; color: var(--gray-700); font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer;">로그아웃</button>
+        </div>
     `;
 }
 
@@ -99,11 +95,6 @@ export function renderAuthWorkspace(container, state) {
                             <p style="font-size: 14px; color: var(--gray-600);">진행 업무와 이슈 사항을 기록하고 동료들과 공유하세요.</p>
                         </div>
                     </div>
-                </div>
-                <div style="margin-top: 32px; padding: 20px; background: var(--brand-soft); border: 1px dashed var(--brand);">
-                    <p style="font-size: 13px; color: var(--brand); text-align: center; margin: 0; font-weight: 500;">
-                        <i class="fa-solid fa-lock" style="margin-right: 6px;"></i> 현재 단계는 앱 내부 사용자 관리 방식이며, 플랫폼 확장 시 Supabase Auth + RLS를 별도 도입합니다.
-                    </p>
                 </div>
             </section>
         </div>

@@ -327,9 +327,33 @@ textarea {
     box-shadow: var(--shadow-warm), var(--shadow-card), var(--shadow-inset);
 }
 
-.date-card-head span,
+.date-card-head {
+    margin-bottom: 10px;
+}
+
+.date-card-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--gray-900);
+    letter-spacing: -0.03em;
+}
+
+.date-card-meta {
+    color: var(--gray-700);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.date-card.is-active .date-card-title {
+    color: var(--black);
+}
+
+.date-card.is-active .date-card-meta {
+    color: var(--gray-800);
+}
+
 .date-card-stats {
-    color: var(--gray-500);
+    color: var(--gray-600);
     font-size: 12px;
 }
 
@@ -440,6 +464,27 @@ textarea {
     align-items: start;
 }
 
+.workers-section {
+    grid-column: 1 / -1;
+}
+
+.workspace-stack {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 24px;
+    min-width: 0;
+}
+
+.workspace-grid.wide > .error-card {
+    grid-column: 1 / -1;
+}
+
+.workspace-grid > *,
+.section-card,
+.workspace-topbar {
+    min-width: 0;
+}
+
 .section-heading {
     align-items: flex-start;
     margin-bottom: 18px;
@@ -483,11 +528,126 @@ textarea {
     box-shadow: var(--shadow-warm), var(--shadow-inset);
 }
 
+.worker-card-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.worker-panel {
+    display: grid;
+    gap: 14px;
+    padding: 18px;
+    border: 1px solid var(--border-medium);
+    background: var(--white);
+    text-align: left;
+    box-shadow: var(--shadow-inset);
+}
+
+.worker-panel:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card), var(--shadow-soft), var(--shadow-inset);
+}
+
+.worker-panel.is-active {
+    background: var(--bg-warm);
+    border-color: rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-warm), var(--shadow-inset);
+}
+
+.worker-panel-top,
+.worker-stat-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.worker-panel-mark {
+    width: 42px;
+    height: 42px;
+    font-size: 22px;
+    line-height: 1;
+    font-weight: 400;
+    box-shadow: none;
+}
+
+.worker-order-badge {
+    padding: 8px 10px;
+    font-size: 12px;
+    box-shadow: none;
+}
+
+.worker-panel-body {
+    display: grid;
+    gap: 4px;
+}
+
+.worker-panel-name {
+    font-size: 16px;
+    color: var(--gray-900);
+}
+
+.worker-panel-role {
+    margin: 0;
+    font-size: 13px;
+    color: var(--gray-500);
+}
+
+.worker-stat-chip {
+    flex: 1;
+    display: grid;
+    gap: 2px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-medium);
+    background: var(--gray-50);
+    color: var(--gray-600);
+    font-size: 12px;
+    box-shadow: var(--shadow-inset);
+}
+
+.worker-stat-chip strong {
+    font-size: 13px;
+    color: var(--gray-900);
+}
+
+.worker-stat-chip.is-done {
+    background: var(--bg-warm);
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+.worker-stat-chip.is-warn {
+    background: rgba(143, 115, 86, 0.08);
+    border-color: rgba(143, 115, 86, 0.18);
+}
+
 .worker-row.admin,
 .worker-table-head.admin {
     display: grid;
     grid-template-columns: 72px 1.05fr 1.35fr 1fr 90px 80px 80px;
-    gap: 14px;
+    gap: 10px;
+    padding: 8px 12px;
+}
+
+.admin-worker-table {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 8px;
+    padding-bottom: 4px;
+}
+
+.worker-row.admin,
+.worker-table-head.admin {
+    min-width: 820px;
+    align-items: center;
+}
+
+.worker-row.admin .inline-action {
+    min-height: auto;
+    padding: 5px 10px;
+    font-size: 13px;
 }
 
 .session-grid {
@@ -496,6 +656,15 @@ textarea {
 
 .session-card {
     padding: 24px;
+}
+
+.session-card.is-clickable {
+    cursor: pointer;
+}
+
+.session-card.is-clickable:focus-visible {
+    outline: 2px solid var(--black);
+    outline-offset: 2px;
 }
 
 .meta-inline {
@@ -516,6 +685,16 @@ textarea {
     margin: 0;
     font-size: 14px;
     color: var(--gray-800);
+}
+
+.modal-note-grid {
+    display: grid;
+    gap: 16px;
+}
+
+.note-preview-text {
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .mono-label {
@@ -656,6 +835,7 @@ textarea {
         gap: 18px;
     }
 
+    .worker-card-strip,
     .session-grid,
     .form-grid {
         grid-template-columns: 1fr;
@@ -696,5 +876,14 @@ textarea {
     .modal-submit {
         width: 100%;
         justify-content: center;
+    }
+
+    .worker-panel {
+        flex-basis: 200px;
+    }
+
+    .worker-stat-row {
+        flex-direction: column;
+        align-items: stretch;
     }
 }

@@ -1,5 +1,5 @@
 import { formatDateLabel, formatTimestamp } from "../core/formatters.js";
-import { escapeHtml } from "../core/utils.js";
+import { escapeHtml, todayKey } from "../core/utils.js";
 
 export function renderDateList(container, copyElement, state, dateGroups) {
     if (!state.currentWorker) {
@@ -13,7 +13,7 @@ export function renderDateList(container, copyElement, state, dateGroups) {
         container.innerHTML = `
             <div class="empty-card">
                 <p>아직 생성된 미팅 날짜가 없습니다.</p>
-                ${state.currentWorker.is_admin ? `<button class="action-button compact" type="button" data-action="create-default-sessions" data-date="${escapeHtml(new Date().toISOString().slice(0, 10))}">오늘 기본 미팅 생성</button>` : ""}
+                ${state.currentWorker.is_admin ? `<button class="action-button compact" type="button" data-action="create-default-sessions" data-date="${escapeHtml(todayKey())}">오늘 기본 미팅 생성</button>` : ""}
             </div>
         `;
         return;
@@ -22,9 +22,9 @@ export function renderDateList(container, copyElement, state, dateGroups) {
     copyElement.textContent = "날짜를 클릭하면 해당 일자의 상세 현황을 확인합니다.";
     container.innerHTML = dateGroups.map((group) => `
         <button class="date-card ${group.date === state.selectedDate ? "is-active" : ""}" type="button" data-action="select-date" data-date="${escapeHtml(group.date)}">
-            <div class="date-card-head" style="margin-bottom: 8px;">
-                <strong style="font-size: 16px; ${group.date === state.selectedDate ? "color: var(--white);" : "color: var(--gray-200);"}">${formatDateLabel(group.date)}</strong>
-                <span style="font-size: 10px; opacity: 0.6;">${formatTimestamp(group.lastUpdatedAt)}</span>
+            <div class="date-card-head">
+                <strong class="date-card-title">${formatDateLabel(group.date)}</strong>
+                <span class="date-card-meta">${formatTimestamp(group.lastUpdatedAt)}</span>
             </div>
             <div class="date-card-stats" style="display: flex; gap: 8px;">
                 <div style="display: flex; align-items: center; gap: 4px;">

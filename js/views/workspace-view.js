@@ -1,5 +1,6 @@
 import { formatDateLabel, formatTimestamp, meetingDisplayName, workerStatusLabel } from "../core/formatters.js";
-import { escapeHtml } from "../core/utils.js";
+import { getWorkerEmoji } from "../core/worker-emoji.js";
+import { escapeHtml, todayKey } from "../core/utils.js";
 import {
     canEditWorkerNotes,
     getAllWorkersSorted,
@@ -13,13 +14,10 @@ function renderHeaderActions(state) {
         return "";
     }
 
-    const selectedDate = state.selectedDate || new Date().toISOString().slice(0, 10);
+    const selectedDate = state.selectedDate || todayKey();
 
     return `
         <div class="badge-row">
-            <span class="tiny-badge">${state.currentWorker.is_admin ? "관리자" : "작업자"}</span>
-            <span class="tiny-badge">기준일 ${formatDateLabel(selectedDate)}</span>
-            <button class="ghost-button compact" type="button" data-action="refresh-data">새로고침</button>
             ${state.currentWorker.is_admin ? `<button class="ghost-button compact" type="button" data-action="create-default-sessions" data-date="${escapeHtml(selectedDate)}">기본 미팅 생성</button>` : ""}
             ${state.currentWorker.is_admin && state.selectedDate ? `<button class="ghost-button compact" type="button" data-action="open-emergency-modal">긴급 미팅 추가</button>` : ""}
             ${state.currentWorker.is_admin ? `<button class="ghost-button compact" type="button" data-action="open-worker-modal">작업자 등록</button>` : ""}
@@ -32,7 +30,6 @@ export function renderWorkspaceHeader(container, state, dateGroups) {
         container.innerHTML = `
             <section class="workspace-topbar">
                 <div class="workspace-title">
-                    <p class="eyebrow">Daily Meeting Memo</p>
                     <h2>로그인 필요</h2>
                     <p>이메일과 비밀번호로 로그인하거나 새 계정을 생성해 데일리 미팅 메모를 사용할 수 있습니다.</p>
                 </div>
@@ -46,10 +43,8 @@ export function renderWorkspaceHeader(container, state, dateGroups) {
     container.innerHTML = `
         <section class="workspace-topbar">
             <div class="workspace-title">
-                <p class="eyebrow">Daily Meeting Memo</p>
                 <div class="workspace-title-row">
-                    <h2>${formatDateLabel(state.selectedDate || new Date().toISOString().slice(0, 10))}</h2>
-                    <span class="status-badge">${escapeHtml(state.currentWorker.name)}</span>
+                    <h2>${formatDateLabel(state.selectedDate || todayKey())}</h2>
                 </div>
                 <p>작업자별로 시작미팅, 종료미팅, 긴급미팅 메모를 등록하고 확인합니다.</p>
             </div>
@@ -70,38 +65,39 @@ function renderWorkerList(state) {
     const rows = getWorkerRowsForSelectedDate();
 
     return `
-        <section class="section-card">
+        <section class="section-card workers-section">
             <div class="section-heading">
                 <div>
                     <p class="eyebrow">Workers</p>
                     <h2>작업자 리스트</h2>
                 </div>
             </div>
-            <div class="worker-table">
-                <div class="worker-table-head">
-                    <span>순위</span>
-                    <span>작업자</span>
-                    <span style="text-align: center;">Scrum</span>
-                    <span style="text-align: center;">Wrap</span>
-                    <span style="text-align: center;">Emergency</span>
-                </div>
+            <div class="worker-card-strip">
                 ${rows.length ? rows.map(({ worker, scrumDone, wrapDone, emergencyCount }) => `
-                    <button class="worker-row ${worker.id === state.selectedWorkerId ? "is-active" : ""}" type="button" data-action="select-worker" data-worker-id="${escapeHtml(worker.id)}">
-                        <span class="mono-value" style="width: 20px;">${worker.sort_order}</span>
-                        <div style="flex: 1; display: flex; align-items: center; gap: 10px;">
-                            <div class="brand-mark" style="width: 32px; height: 32px; font-size: 14px; background: ${worker.id === state.selectedWorkerId ? "var(--white)" : "var(--gray-100)"}; color: ${worker.id === state.selectedWorkerId ? "var(--brand)" : "var(--gray-500)"};">
-                                ${escapeHtml(worker.name.charAt(0))}
+                    <button class="worker-panel ${worker.id === state.selectedWorkerId ? "is-active" : ""}" type="button" data-action="select-worker" data-worker-id="${escapeHtml(worker.id)}">
+                        <div class="worker-panel-top">
+                            <span class="tiny-badge worker-order-badge">순위 ${worker.sort_order}</span>
+                            <div class="brand-mark worker-panel-mark" style="background: ${worker.id === state.selectedWorkerId ? "var(--black)" : "var(--gray-100)"}; color: ${worker.id === state.selectedWorkerId ? "var(--white)" : "var(--gray-500)"};">
+                                ${escapeHtml(getWorkerEmoji(worker))}
                             </div>
-                            <strong style="font-size: 15px;">${escapeHtml(worker.name)}</strong>
                         </div>
-                        <div style="width: 60px; text-align: center;">
-                            ${scrumDone ? `<i class="fa-solid fa-circle-check" style="color: var(--brand);"></i>` : `<i class="fa-solid fa-circle" style="color: var(--gray-200);"></i>`}
+                        <div class="worker-panel-body">
+                            <strong class="worker-panel-name">${escapeHtml(worker.name)}</strong>
+                            <p class="worker-panel-role">${escapeHtml(worker.role_name || "작업자")}</p>
                         </div>
-                        <div style="width: 60px; text-align: center;">
-                            ${wrapDone ? `<i class="fa-solid fa-circle-check" style="color: var(--brand);"></i>` : `<i class="fa-solid fa-circle" style="color: var(--gray-200);"></i>`}
-                        </div>
-                        <div style="width: 60px; text-align: center;">
-                            <span class="tiny-badge" style="background: ${emergencyCount > 0 ? "var(--warn)" : "var(--gray-100)"}; color: ${emergencyCount > 0 ? "var(--white)" : "var(--gray-500)"}; border: none;">${emergencyCount}</span>
+                        <div class="worker-stat-row">
+                            <span class="worker-stat-chip ${scrumDone ? "is-done" : ""}">
+                                <span>Scrum</span>
+                                <strong>${scrumDone ? "완료" : "미등록"}</strong>
+                            </span>
+                            <span class="worker-stat-chip ${wrapDone ? "is-done" : ""}">
+                                <span>Wrap</span>
+                                <strong>${wrapDone ? "완료" : "미등록"}</strong>
+                            </span>
+                            <span class="worker-stat-chip ${emergencyCount > 0 ? "is-warn" : ""}">
+                                <span>Emergency</span>
+                                <strong>${emergencyCount}</strong>
+                            </span>
                         </div>
                     </button>
                 `).join("") : `<div class="empty-card"><p>활성 작업자가 없습니다.</p></div>`}
@@ -122,7 +118,7 @@ function renderSessionCards(state) {
         return `
             <section class="section-card">
                 <div class="empty-card">
-                    <p>좌측 리스트에서 작업자를 선택하여 상세 내용을 확인하세요.</p>
+                    <p>상단 작업자 카드에서 작업자를 선택하여 상세 내용을 확인하세요.</p>
                 </div>
             </section>
         `;
@@ -144,7 +140,15 @@ function renderSessionCards(state) {
                     const note = state.notes.find((item) => item.meeting_session_id === session.id && item.worker_id === worker.id) || null;
                     const editable = canEditWorkerNotes(worker.id);
                     return `
-                        <article class="session-card">
+                        <article
+                            class="session-card is-clickable"
+                            tabindex="0"
+                            role="button"
+                            data-action="open-note-preview"
+                            data-session-id="${escapeHtml(session.id)}"
+                            data-worker-id="${escapeHtml(worker.id)}"
+                            aria-label="${escapeHtml(`${meetingDisplayName(session)} 전체 내용 보기`)}"
+                        >
                             <div class="card-header" style="margin-bottom: 20px; align-items: flex-start;">
                                 <div style="flex: 1;">
                                     <h3 class="card-title">${escapeHtml(meetingDisplayName(session))}</h3>
@@ -244,17 +248,19 @@ export function renderWorkspaceBody(container, state) {
     if (!getSelectedDateSessions().length) {
         container.innerHTML = `
             ${errorBlock}
-            <section class="section-card">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">Empty Date</p>
-                        <h2>선택한 날짜에 미팅 세션이 없습니다.</h2>
+            <div class="workspace-stack">
+                <section class="section-card">
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">Empty Date</p>
+                            <h2>선택한 날짜에 미팅 세션이 없습니다.</h2>
+                        </div>
                     </div>
-                </div>
-                <p class="section-note">관리자는 기본 미팅 생성 버튼으로 시작미팅/종료미팅 세션을 만들 수 있습니다.</p>
-                ${state.currentWorker.is_admin ? `<button class="action-button" type="button" data-action="create-default-sessions" data-date="${escapeHtml(state.selectedDate || new Date().toISOString().slice(0, 10))}">기본 미팅 생성</button>` : ""}
-            </section>
-            ${renderAdminWorkerSection(state)}
+                    <p class="section-note">관리자는 기본 미팅 생성 버튼으로 시작미팅/종료미팅 세션을 만들 수 있습니다.</p>
+                    ${state.currentWorker.is_admin ? `<button class="action-button" type="button" data-action="create-default-sessions" data-date="${escapeHtml(state.selectedDate || todayKey())}">기본 미팅 생성</button>` : ""}
+                </section>
+                ${renderAdminWorkerSection(state)}
+            </div>
         `;
         return;
     }
@@ -263,8 +269,10 @@ export function renderWorkspaceBody(container, state) {
         <div class="workspace-grid wide">
             ${errorBlock}
             ${renderWorkerList(state)}
-            ${renderSessionCards(state)}
-            ${renderAdminWorkerSection(state)}
+            <div class="workspace-stack">
+                ${renderSessionCards(state)}
+                ${renderAdminWorkerSection(state)}
+            </div>
         </div>
     `;
 }
