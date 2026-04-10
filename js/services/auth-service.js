@@ -1,5 +1,12 @@
 import { supabase } from "./supabase-client.js";
-import { fetchNextWorkerSortOrder } from "./daily-meeting-service.js";
+import {
+    fetchNextWorkerSortOrder,
+    upsertWorkerProfileFromDefectManageUser
+} from "./daily-meeting-service.js";
+import {
+    fetchDefectManageUserByEmail,
+    isDefectManageUserActive
+} from "./defect-manage-user-service.js";
 import { getWorkerEmoji } from "../core/worker-emoji.js";
 import { normalizeEmail } from "../core/utils.js";
 
@@ -37,6 +44,10 @@ function mapAuthError(message) {
 
     if (message.includes("DUPLICATE_EMAIL")) {
         return "이미 사용 중인 이메일입니다. 로그인해 주세요.";
+    }
+
+    if (message.includes("LINKED_ACCOUNT_EXISTS")) {
+        return "Defect Manage에 등록된 계정입니다. 해당 비밀번호로 로그인해 주세요.";
     }
 
     if (message.includes("NAME_REQUIRED")) {
@@ -134,6 +145,22 @@ async function updateLastLogin(workerId) {
     return result.data.last_login_at;
 }
 
+async function finalizeLogin(worker) {
+    const lastLoginAt = await updateLastLogin(worker.id);
+    const session = persistSession({
+        ...worker,
+        last_login_at: lastLoginAt
+    });
+
+    return {
+        session,
+        worker: {
+            ...worker,
+            last_login_at: lastLoginAt
+        }
+    };
+}
+
 function validatePassword(password) {
     const normalized = String(password || "");
     if (!normalized.trim()) {
@@ -181,8 +208,27 @@ export async function restoreSession() {
 export async function loginWithPassword({ email, password }) {
     try {
         validatePassword(password);
-        const worker = await fetchWorkerByEmail(email);
+        const bcrypt = getBcrypt();
+        const defectManageUser = await fetchDefectManageUserByEmail(email);
+        if (defectManageUser) {
+            if (!isDefectManageUserActive(defectManageUser)) {
+                throw new Error("INACTIVE_ACCOUNT");
+            }
 
+            if (!defectManageUser.password) {
+                throw new Error("PASSWORD_NOT_SET");
+            }
+
+            const isLinkedMatch = bcrypt.compareSync(password, defectManageUser.password);
+            if (isLinkedMatch) {
+                const syncedWorker = await upsertWorkerProfileFromDefectManageUser(defectManageUser);
+                return await finalizeLogin(syncedWorker);
+            }
+
+            throw new Error("INVALID_PASSWORD");
+        }
+
+        const worker = await fetchWorkerByEmail(email);
         if (!worker) {
             throw new Error("ACCOUNT_NOT_FOUND");
         }
@@ -195,25 +241,12 @@ export async function loginWithPassword({ email, password }) {
             throw new Error("PASSWORD_NOT_SET");
         }
 
-        const bcrypt = getBcrypt();
         const isMatch = bcrypt.compareSync(password, worker.password_hash);
-        if (!isMatch) {
-            throw new Error("INVALID_PASSWORD");
+        if (isMatch) {
+            return await finalizeLogin(worker);
         }
 
-        const lastLoginAt = await updateLastLogin(worker.id);
-        const session = persistSession({
-            ...worker,
-            last_login_at: lastLoginAt
-        });
-
-        return {
-            session,
-            worker: {
-                ...worker,
-                last_login_at: lastLoginAt
-            }
-        };
+        throw new Error("INVALID_PASSWORD");
     } catch (error) {
         throw new Error(mapAuthError(error.message || ""));
     }
@@ -239,7 +272,16 @@ export async function signUpWithPassword({ name, email, password, passwordConfir
         const hashedPassword = await hashPassword(password);
         const now = new Date().toISOString();
         const existingWorker = await fetchWorkerByEmail(normalizedEmail);
+        const defectManageUser = await fetchDefectManageUserByEmail(normalizedEmail);
         let worker;
+
+        if (defectManageUser) {
+            if (!isDefectManageUserActive(defectManageUser)) {
+                throw new Error("INACTIVE_ACCOUNT");
+            }
+
+            throw new Error("LINKED_ACCOUNT_EXISTS");
+        }
 
         if (existingWorker) {
             if (existingWorker.status !== "active") {

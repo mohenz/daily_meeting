@@ -1,4 +1,5 @@
 import { supabase } from "./supabase-client.js";
+import { mapDefectManageUserToRoleName } from "./defect-manage-user-service.js";
 import { normalizeEmail, toNumber } from "../core/utils.js";
 
 function ensureSuccess(result, fallbackMessage) {
@@ -33,6 +34,25 @@ export async function fetchCurrentWorkerProfile(workerId) {
         .from("worker_profiles")
         .select("*")
         .eq("id", workerId)
+        .maybeSingle();
+
+    if (result.error && result.error.code !== "PGRST116") {
+        throw new Error(result.error.message);
+    }
+
+    return result.data || null;
+}
+
+async function fetchWorkerProfileByEmail(email) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
+        return null;
+    }
+
+    const result = await supabase
+        .from("worker_profiles")
+        .select("*")
+        .eq("email", normalizedEmail)
         .maybeSingle();
 
     if (result.error && result.error.code !== "PGRST116") {
@@ -190,4 +210,52 @@ export async function saveWorkerProfile(payload) {
         .single();
 
     return ensureSuccess(result, "작업자를 등록하지 못했습니다.");
+}
+
+export async function upsertWorkerProfileFromDefectManageUser(user) {
+    const normalizedEmail = normalizeEmail(user?.email);
+    if (!normalizedEmail) {
+        throw new Error("등록된 계정을 찾지 못했습니다.");
+    }
+
+    const existingWorker = await fetchWorkerProfileByEmail(normalizedEmail);
+    const now = new Date().toISOString();
+    const nextSortOrder = existingWorker ? existingWorker.sort_order : await fetchNextWorkerSortOrder();
+    const passwordHash = String(user?.password || "").trim();
+    const normalized = {
+        name: String(user?.name || "").trim() || normalizedEmail,
+        email: normalizedEmail,
+        role_name: mapDefectManageUserToRoleName(user),
+        is_admin: user?.role === "관리자",
+        status: user?.status === "사용" ? "active" : "inactive",
+        sort_order: nextSortOrder
+    };
+
+    if (passwordHash && passwordHash !== existingWorker?.password_hash) {
+        normalized.password_hash = passwordHash;
+        normalized.password_updated_at = now;
+    }
+
+    if (existingWorker) {
+        const result = await supabase
+            .from("worker_profiles")
+            .update(normalized)
+            .eq("id", existingWorker.id)
+            .select()
+            .single();
+
+        return ensureSuccess(result, "Defect Manage 사용자 정보를 동기화하지 못했습니다.");
+    }
+
+    const result = await supabase
+        .from("worker_profiles")
+        .insert({
+            ...normalized,
+            password_hash: passwordHash || null,
+            password_updated_at: passwordHash ? now : null
+        })
+        .select()
+        .single();
+
+    return ensureSuccess(result, "Defect Manage 사용자 정보를 등록하지 못했습니다.");
 }
